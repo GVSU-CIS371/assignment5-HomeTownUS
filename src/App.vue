@@ -71,7 +71,11 @@
     </ul>
 
     <div class="auth-row">
-      <button @click="withGoogle">Sign in with Google</button>
+      <div v-if="beverageStore.user != null">
+        <span>Signed in as {{beverageStore.user?.displayName}}</span>
+        <button @click="signOutBTN()">Sign Out</button>
+      </div>
+      <button v-else @click="withGoogle">Sign in with Google</button>
     </div>
     <input
       v-model="beverageStore.currentName"
@@ -79,7 +83,7 @@
       placeholder="Beverage Name"
     />
 
-    <button @click="handleMakeBeverage">🍺 Make Beverage</button>
+    <button :disabled="beverageStore.user == null" @click="handleMakeBeverage">🍺 Make Beverage</button>
 
     <p v-if="message" class="status-message">
       {{ message }}
@@ -104,9 +108,19 @@
 import { ref } from "vue";
 import Beverage from "./components/Beverage.vue";
 import { useBeverageStore } from "./stores/beverageStore";
+import {getAuth, GoogleAuthProvider, signInWithPopup, User, onAuthStateChanged, signOut} from "firebase/auth";
 
 const beverageStore = useBeverageStore();
 beverageStore.init();
+const auth = getAuth();
+
+onAuthStateChanged(auth, (user) => {
+  beverageStore.setUser(user);
+})
+
+const signOutBTN = () => {
+  signOut(auth);
+}
 
 const message = ref("");
 
@@ -117,7 +131,19 @@ const showMessage = (txt: string) => {
   }, 5000);
 };
 
-const withGoogle = async () => {};
+const withGoogle = async () => {
+  
+  const provider = new GoogleAuthProvider();
+
+  signInWithPopup(auth, provider)
+  .then((result) => {
+    const cred = GoogleAuthProvider.credentialFromResult(result);
+    console.log("Successfully signed in");
+  })
+  .catch((err: any) => {
+    console.error("Error:", err)
+  })
+};
 
 const handleMakeBeverage = () => {
   const txt = beverageStore.makeBeverage();
