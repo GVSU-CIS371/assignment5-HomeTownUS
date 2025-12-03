@@ -13,6 +13,7 @@ import db from "../firebase.ts";
 import {
   collection,
   getDocs,
+  getDoc,
   setDoc,
   doc,
   QuerySnapshot,
@@ -21,6 +22,7 @@ import {
   query,
   where,
   Unsubscribe,
+  DocumentSnapshot,
 } from "firebase/firestore";
 import type { User } from "firebase/auth";
 
@@ -145,7 +147,74 @@ export const useBeverageStore = defineStore("BeverageStore", {
         this.currentSyrup
       );
     },
-    makeBeverage() {},
-    setUser(user: User | null) {},
+    makeBeverage() {
+      if(this.user == null) {
+        return "Please sign in to make a beverage.";
+      } else {
+        //make beverage under user
+        if(this.currentName.trim() === ""){
+          return "Please enter a name";
+        }
+        if(this.currentBase && this.currentCreamer && this.currentSyrup){
+          this.currentBeverage = {
+            id: (this.currentBase?.id)+(this.currentCreamer?.id)+(this.currentSyrup?.id)+this.currentName,
+            uid: this.user.uid,
+            name: this.currentName,
+            temp: this.currentTemp,
+            base: this.currentBase,
+            creamer: this.currentCreamer,
+            syrup: this.currentSyrup
+          };
+
+          const bev = doc(db, "Users", `${this.user?.uid}`, "beverages", `${this.currentBeverage?.id}`)
+          setDoc(bev,{
+            id: this.currentBeverage?.id,
+            uid: this.currentBeverage?.uid,
+            name: this.currentBeverage?.name,
+            temp: this.currentBeverage?.temp,
+            base: this.currentBeverage?.base,
+            creamer: this.currentBeverage?.creamer,
+            syrup: this.currentBeverage?.syrup
+          });
+          return `Successfully added ${this.currentBeverage?.name}`;
+        }
+        return "Failed to make beverage";
+      }
+    },
+    setUser(user: User | null) {
+      this.user = user;
+      if(!user){ //user not signed in
+        //reset bevs, currentBev, and Bev components
+        this.currentBeverage = null;
+        this.currentTemp = this.temps[0]
+        this.currentBase = this.bases[0];
+        this.currentCreamer = this.creamers[0];
+        this.currentSyrup = this.syrups[0];
+        this.currentName = "";
+        this.beverages = [];
+        //remove listener
+        this.snapshotUnsubscribe!();
+      } else {
+        
+        //add listener
+        const bevs = collection(db, "Users", `${user?.uid}`, "beverages")
+        this.snapshotUnsubscribe = onSnapshot(bevs,(qs: QuerySnapshot) => {
+          //set beverages if beverages are not empty
+          if(!qs.empty){
+            this.beverages = qs.docs.map((qd: QueryDocumentSnapshot) => ({
+              id: qd.id,
+              name: qd.data().name,
+              base: qd.data().base,
+              creamer: qd.data().creamer,
+              syrup: qd.data().syrup,
+              temp: qd.data().temp,
+              uid: qd.data().uid
+            })) as BeverageType[]
+          }
+        })
+        //update beverages to the user's
+        
+      }
+    },
   },
 });

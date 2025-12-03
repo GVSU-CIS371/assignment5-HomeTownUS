@@ -7,7 +7,7 @@
         <Creamer v-if="beverageStore.currentCreamer?.color !== 'transparent'" />
       </template>
       <template v-slot:mid>
-        <Syrup v-if="beverageStore.currentSyrup?.color !== 'transparent'" />
+        <Syrup v-if="beverageStore.currentSyrup?.color !== '#c6c6c6'" />
       </template>
       <template v-slot:bottom>
         <Base />
